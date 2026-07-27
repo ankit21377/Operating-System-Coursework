@@ -2,11 +2,78 @@
 #include <stdlib.h>
 #include <string.h>
 #include <winsock2.h>
+#include <pthread.h>
 #include "authentication.h"
 
 #pragma comment(lib, "ws2_32.lib")
 
 #define PORT 8080
+void *handle_client(void *arg)
+{
+    SOCKET client_socket = *(SOCKET *)arg;
+    free(arg);
+
+    char username[100];
+    char password[50];
+    int bytes;
+
+    // Receive Username
+    bytes = recv(client_socket, username, sizeof(username) - 1, 0);
+
+    if (bytes <= 0)
+    {
+        closesocket(client_socket);
+        return NULL;
+    }
+
+    username[bytes] = '\0';
+
+    printf("Username: %s\n", username);
+
+    send(client_socket,
+         "Username Received",
+         strlen("Username Received"),
+         0);
+
+    // Receive Password
+    bytes = recv(client_socket,
+                 password,
+                 sizeof(password) - 1,
+                 0);
+
+    if (bytes <= 0)
+    {
+        closesocket(client_socket);
+        return NULL;
+    }
+
+    password[bytes] = '\0';
+
+    printf("Password: %s\n", password);
+
+    if (authenticate(username, password))
+    {
+        send(client_socket,
+             "Authentication Successful",
+             strlen("Authentication Successful"),
+             0);
+
+        printf("Authentication Successful\n");
+    }
+    else
+    {
+        send(client_socket,
+             "Authentication Failed",
+             strlen("Authentication Failed"),
+             0);
+
+        printf("Authentication Failed\n");
+    }
+
+    closesocket(client_socket);
+
+    return NULL;
+}
 
 int main()
 {
@@ -63,73 +130,36 @@ int main()
     printf("Waiting for client connection...\n");
     printf("=====================================\n");
 
+    while (1)
+{
     client_socket = accept(server_socket,
                            (struct sockaddr *)&client_addr,
                            &client_len);
 
     if (client_socket == INVALID_SOCKET)
     {
-        printf("Client connection failed!\n");
-
-        closesocket(server_socket);
-        WSACleanup();
-        return 1;
+        continue;
     }
 
-    printf("Client connected successfully!\n");
+    printf("Client Connected.\n");
 
-    // Receive Username
-    bytes = recv(client_socket, username, sizeof(username) - 1, 0);
+    SOCKET *new_socket = malloc(sizeof(SOCKET));
+    *new_socket = client_socket;
 
-    if (bytes <= 0)
+    pthread_t thread;
+
+    if (pthread_create(&thread, NULL, handle_client, new_socket) == 0)
     {
-        printf("Failed to receive username.\n");
+    pthread_detach(thread);
     }
     else
     {
-        username[bytes] = '\0';
-
-        printf("Username: %s\n", username);
-
-        send(client_socket,
-             "Username Received",
-             strlen("Username Received"),
-             0);
-
-        // Receive Password
-        bytes = recv(client_socket,
-                     password,
-                     sizeof(password) - 1,
-                     0);
-
-        if (bytes > 0)
-        {
-            password[bytes] = '\0';
-
-            printf("Password: %s\n", password);
-
-            if (authenticate(username, password))
-            {
-                send(client_socket,
-                     "Authentication Successful",
-                     strlen("Authentication Successful"),
-                     0);
-
-                printf("Authentication Successful\n");
-            }
-            else
-            {
-                send(client_socket,
-                     "Authentication Failed",
-                     strlen("Authentication Failed"),
-                     0);
-
-                printf("Authentication Failed\n");
-            }
-        }
-    }
-
+    printf("Thread creation failed!\n");
     closesocket(client_socket);
+    free(new_socket);
+    }
+}
+
     closesocket(server_socket);
 
     WSACleanup();

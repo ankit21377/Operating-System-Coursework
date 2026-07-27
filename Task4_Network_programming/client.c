@@ -58,15 +58,22 @@ scanf("%49s", password);
 
 send(client_socket, username, strlen(username), 0);
 
-recv(client_socket, buffer, sizeof(buffer) - 1, 0);
-buffer[strlen(buffer)] = '\0';
+int bytes;
+
+bytes = recv(client_socket, buffer, sizeof(buffer) - 1, 0);
+if (bytes > 0) {
+    buffer[bytes] = '\0';
+}
 
 send(client_socket, password, strlen(password), 0);
 
-recv(client_socket, buffer, sizeof(buffer) - 1, 0);
-buffer[strlen(buffer)] = '\0';
+bytes = recv(client_socket, buffer, sizeof(buffer) - 1, 0);
+if (bytes > 0) {
+    buffer[bytes] = '\0';
+}
 
 printf("%s\n", buffer);
+
     closesocket(client_socket);
 
     WSACleanup();
