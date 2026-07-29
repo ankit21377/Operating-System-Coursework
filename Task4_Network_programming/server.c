@@ -4,6 +4,7 @@
 #include <winsock2.h>
 #include <pthread.h>
 #include "authentication.h"
+#include "protocol.h"
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -18,7 +19,9 @@ void *handle_client(void *arg)
     int bytes;
 
     // Receive Username
-    bytes = recv(client_socket, username, sizeof(username) - 1, 0);
+    bytes = receive_message(client_socket,
+                        username,
+                        sizeof(username));
 
     if (bytes <= 0)
     {
@@ -30,16 +33,13 @@ void *handle_client(void *arg)
 
     printf("Username: %s\n", username);
 
-    send(client_socket,
-         "Username Received",
-         strlen("Username Received"),
-         0);
+   send_message(client_socket,
+             "Username Received");
 
     // Receive Password
-    bytes = recv(client_socket,
-                 password,
-                 sizeof(password) - 1,
-                 0);
+   bytes = receive_message(client_socket,
+                        password,
+                        sizeof(password));
 
     if (bytes <= 0)
     {
@@ -51,24 +51,20 @@ void *handle_client(void *arg)
 
     printf("Password: %s\n", password);
 
-    if (authenticate(username, password))
-    {
-        send(client_socket,
-             "Authentication Successful",
-             strlen("Authentication Successful"),
-             0);
+   if (authenticate(username, password))
+{
+    send_message(client_socket,
+                 "Authentication Successful");
 
-        printf("Authentication Successful\n");
-    }
-    else
-    {
-        send(client_socket,
-             "Authentication Failed",
-             strlen("Authentication Failed"),
-             0);
+    printf("Authentication Successful\n");
+}
+else
+{
+    send_message(client_socket,
+                 "Authentication Failed");
 
-        printf("Authentication Failed\n");
-    }
+    printf("Authentication Failed\n");
+}
 
     closesocket(client_socket);
 

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <winsock2.h>
+#include "protocol.h"
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -56,27 +57,29 @@ scanf("%99s", username);
 printf("Enter Password: ");
 scanf("%49s", password);
 
-send(client_socket, username, strlen(username), 0);
+/* Send username */
+send_message(client_socket, username);
 
-int bytes;
-
-bytes = recv(client_socket, buffer, sizeof(buffer) - 1, 0);
-if (bytes > 0) {
-    buffer[bytes] = '\0';
-}
-
-send(client_socket, password, strlen(password), 0);
-
-bytes = recv(client_socket, buffer, sizeof(buffer) - 1, 0);
-if (bytes > 0) {
-    buffer[bytes] = '\0';
-}
+/* Receive acknowledgement */
+receive_message(client_socket,
+                buffer,
+                sizeof(buffer));
 
 printf("%s\n", buffer);
 
-    closesocket(client_socket);
+/* Send password */
+send_message(client_socket, password);
 
-    WSACleanup();
+/* Receive authentication result */
+receive_message(client_socket,
+                buffer,
+                sizeof(buffer));
 
-    return 0;
+printf("%s\n", buffer);
+
+closesocket(client_socket);
+
+WSACleanup();
+
+return 0;
 }
